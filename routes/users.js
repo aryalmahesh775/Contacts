@@ -15,14 +15,12 @@ const User = require('../models/User');
 router.post(
   '/',
   [
-    check('name', 'Please name is required')
-      .not()
-      .isEmpty(),
+    check('name', 'Please name is required').not().isEmpty(),
     check('email', 'PLease include a valid email ').isEmail(),
     check(
       'password',
-      'PLease enter a password with 6 or more characters'
-    ).isLength({ min: 6 })
+      'Please enter a password with 6 or more characters'
+    ).isLength({ min: 6 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -36,13 +34,13 @@ router.post(
       let user = await User.findOne({ email });
 
       if (user) {
-        return res.status(400).json({ msg: 'User already exists ' });
+        return res.status(400).json({ msg: 'User already exists' });
       }
 
       user = new User({
         name,
         email,
-        password
+        password,
       });
 
       const salt = await bcrypt.genSalt(10);
@@ -50,6 +48,26 @@ router.post(
       user.password = await bcrypt.hash(password, salt);
 
       await user.save();
+
+      // SUPPOSED TO BE MISSED code
+      const payload = {
+        user: {
+          id: user.id,
+        },
+      };
+
+      jwt.sign(
+        payload,
+        config.get('jwtSecret'),
+        {
+          expiresIn: 3600000,
+        },
+        (err, token) => {
+          if (err) throw err;
+          res.json({ token });
+        }
+      );
+      //  Till here
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server Error');
